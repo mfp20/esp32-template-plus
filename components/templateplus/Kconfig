@@ -1,0 +1,314 @@
+menu "Template Plus"
+
+config MCU_TYPE
+    int
+    default 0 if D0WDQ6
+    default 1 if S0WD
+	choice
+    	prompt "MCU"
+    	config D0WDQ6
+    	    bool "Dual core ESP32"
+    	    help
+    	        ESP32-D0WDQ6.
+    	config S0WD
+    	    bool "Single core ESP32"
+        	help
+        	    ESP32-S0WD.
+	endchoice
+
+config BOARD_TYPE
+    int
+    default 0 if ESP32D
+    default 1 if M5STACK
+    default 2 if ESP32S
+	choice
+    	prompt "Board"
+    	depends on D0WDQ6
+    	config ESP32D
+    	    depends on D0WDQ6
+        	bool "Generic dual core ESP32"
+        	help
+            	It should work on any ESP32 board, your mileage may vary.
+    	config M5STACK
+        	depends on D0WDQ6
+        	bool "M5Stack Core Gen1"
+        	help
+            	M5Stack Core Gen1 board.
+	endchoice
+	choice
+    	prompt "Board"
+    	depends on S0WD
+    	config ESP32S
+        	depends on S0WD
+        	bool "Generic single core ESP32"
+        	help
+            	It should work on any ESP32 board, your mileage may vary.
+	endchoice
+
+menu "SD Card configuration"
+        depends on ENABLE_MICROPYTHON
+        config SDCARD_MODE
+            int
+            default 1 if SDCARD_MODE1
+            default 2 if SDCARD_MODE2
+            default 3 if SDCARD_MODE3
+        
+            choice
+                prompt "SD Card mode"
+                default SDCARD_MODE3
+                help
+                    Select SD Card operating mode
+            
+                config SDCARD_MODE1
+                    bool "SPI Mode"
+                    depends on !MEMMAP_SPIRAM_ENABLE 
+                config SDCARD_MODE2
+                    bool "1-line SD Mode" 
+                config SDCARD_MODE3
+                    bool "4-line SD Mode" 
+            endchoice
+
+        config SDCARD_CLK
+            int "CLK pin"
+            depends on SDCARD_MODE1
+            range 1 32
+            default 14
+            help
+            Pin used as SPI CLK
+
+        config SDCARD_MOSI
+            int "MOSI pin"
+            depends on SDCARD_MODE1
+            range 1 32
+            default 15
+            help
+            Pin used as SPI MOSI
+
+        config SDCARD_MISO
+            int "MISO pin"
+            depends on SDCARD_MODE1
+            range 1 32
+            default 2
+            help
+            Pin used as SPI MISO
+
+        config SDCARD_CS
+            int "CS pin"
+            depends on SDCARD_MODE1
+            range 1 32
+            default 13
+            help
+            Pin used as SPI CS
+endmenu
+        
+menu "File systems"
+        depends on ENABLE_MICROPYTHON
+        config MICROPY_FATFS_MAX_OPEN_FILES
+            int "Maximum number of opened files"
+            range 4 24
+            default 6
+            help
+            	Maximum number of opened files
+
+        config MICROPY_USE_SPIFFS
+            bool "Use SPIFFS"
+            default y
+            help
+            	Use spiffs on spi Flash instead of FatFS
+
+        config MICROPY_SDMMC_SHOW_INFO
+            bool "Show SDCard/InternalFS info"
+            default y
+            help
+            	Show info after initializing SD card or internal FS
+endmenu
+
+config TIMEZONE
+    string "Time zone"
+    default "GMT0BST"
+    help
+        Set the default time zone string used when updating the time from NTP server
+        Some examples:
+        - Amsterdam/Berlin/Rome (mostly western Europe): CET-1CEST-2
+        - Melbourne: EST-10EDT-11
+        - USA&Canada Pacific Time: PST8PDT
+        - USA&Canada Central Time: CST6CDT
+        - USA&Canada Eastern Time: EST5EDT
+
+menu "WiFi"
+
+config ENABLE_WIFI
+    bool "WiFi"
+    select LWIP_SO_RCVBUF
+    select ETHERNET
+    select WIFI_ENABLED
+    select ESP32_PHY_CALIBRATION_AND_DATA_STORAGE
+    select MEMMAP_SMP
+    default "n"
+config WIFI_SSID
+    string "WiFi ssid"
+    default ""
+    depends on ENABLE_WIFI
+    help
+        The SSID it will connect on boot.
+config WIFI_PASSWORD
+    string "WiFi password"
+    default ""
+    depends on ENABLE_WIFI
+    help
+        The SSID's password to connect.
+config WIFI_AUTOCONNECT
+    bool "Connect on boot"
+    depends on ENABLE_WIFI
+    default "n"
+    help
+        If enabled it will connect on boot to the specified network.
+
+endmenu
+
+menuconfig ENABLE_UPY
+	bool "Enable Micropython"
+	default 0
+    help
+		A lean and efficient Python implementation for microcontrollers and constrained systems.
+
+config ENABLE_UPY_CORE
+	int
+	default 0 if ENABLE_UPY_CORE_0
+	default 1 if ENABLE_UPY_CORE_1
+	depends on ENABLE_UPY
+	choice
+		prompt "Select core for Micropython"
+		depends on ENABLE_UPY
+		config ENABLE_UPY_CORE_0
+			bool "Core 0"
+			help
+				If selected Arduino will be executed by PRO Core.
+		config ENABLE_UPY_CORE_1
+			bool "Core 1"
+			help
+				If selected Arduino will be executed by APP Core.
+	endchoice
+
+config ENABLE_UPY_AUTOSTART
+	bool "Start Micropython REPL on boot"
+	default 0
+	depends on ENABLE_UPY
+	help
+		By default the Micropython task stays suspended waiting for explicit resume.
+		Enabling this option will resume the task and give you the Micropython Read-Evaluate-Print on console.
+
+menuconfig COMPONENT_ARDUINO
+	bool "Enable Arduino libs&app"
+	default 0
+    select LWIP_SO_RCVBUF
+    select ETHERNET
+    select WIFI_ENABLED
+    select ESP32_PHY_CALIBRATION_AND_DATA_STORAGE
+    select MEMMAP_SMP
+	select SUPPORT_STATIC_ALLOCATION
+	help
+		It allows to run applications based on Arduino libs. 
+		If enabled initArduino() is called to run any preparations required by the framework, 
+		memory allocated, the task is created and suspended.
+
+config COMPONENT_ARDUINO_CORE
+	int
+	default 0 if COMPONENT_ARDUINO_CORE_0
+	default 1 if COMPONENT_ARDUINO_CORE_1
+	depends on COMPONENT_ARDUINO
+	choice
+		prompt "Select core for Arduino"
+		depends on COMPONENT_ARDUINO
+		config COMPONENT_ARDUINO_CORE_0
+			bool "Core 0"
+			help
+				If selected Arduino will be executed by PRO Core.
+		config COMPONENT_ARDUINO_CORE_1
+			bool "Core 1"
+			help
+				If selected Arduino will be executed by APP Core.
+	endchoice
+
+config COMPONENT_ARDUINO_AUTOSTART
+	bool "Start Arduino loop on boot"
+	default 0
+	depends on COMPONENT_ARDUINO
+	help
+		By default the Arduino task stays suspended waiting for explicit resume.
+		Enabling this option will resume the C/C++ app task, execute setup() and start the loop.
+
+config DISABLE_HAL_LOCKS
+	bool "Disable mutex locks for HAL"
+	default "n"
+	depends on COMPONENT_ARDUINO
+	help
+		Enabling this option will run all hardware abstraction without locks.
+		While communication with external hardware will be faster, you need to
+		make sure that there is no option to use the same bus from another thread
+		or interrupt at the same time. Option is best used with Arduino enabled
+		and code implemented only in setup/loop and Arduino callbacks
+
+menu "Debug Log Configuration"
+	depends on COMPONENT_ARDUINO
+
+config ARDUHAL_LOG_DEFAULT_LEVEL
+	int
+	default 0 if ARDUHAL_LOG_DEFAULT_LEVEL_NONE
+	default 1 if ARDUHAL_LOG_DEFAULT_LEVEL_ERROR
+	default 2 if ARDUHAL_LOG_DEFAULT_LEVEL_WARN
+	default 3 if ARDUHAL_LOG_DEFAULT_LEVEL_INFO
+	default 4 if ARDUHAL_LOG_DEFAULT_LEVEL_DEBUG
+	default 5 if ARDUHAL_LOG_DEFAULT_LEVEL_VERBOSE
+	depends on COMPONENT_ARDUINO
+	choice
+		prompt "Default log level"
+		depends on COMPONENT_ARDUINO
+		config ARDUHAL_LOG_DEFAULT_LEVEL_NONE
+			bool "No output"
+			help
+				No output to logs.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_ERROR
+			bool "Error"
+			help
+				Errors only.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_WARN
+			bool "Warning"
+			help
+				Errors and Warnings.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_INFO
+			bool "Info"
+			help
+				Errors, Warnings, Info.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_DEBUG
+			bool "Debug"
+	   		help
+				Errors, Warnings, Info, Debug.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_VERBOSE
+			bool "Everything"
+			help
+				Everything.
+	endchoice
+
+	config ARDUHAL_LOG_COLORS
+		bool "Use ANSI terminal colors in log output"
+		default "n"
+		depends on COMPONENT_ARDUINO
+		help
+			Enable ANSI terminal color codes in bootloader output.
+			In order to view these, your terminal program must support ANSI color codes.
+
+	config ARDUHAL_ESP_LOG
+		bool "Forward ESP_LOGx to Arduino log output"
+		default "n"
+		depends on COMPONENT_ARDUINO
+		help
+			This option will redefine the ESP_LOGx macros to Arduino's log_x macros.
+			To enable for your application, add the follwing after your includes:
+			#ifdef ARDUINO_ARCH_ESP32
+			#include "esp32-hal-log.h"
+			#endif
+
+endmenu
+
+endmenu

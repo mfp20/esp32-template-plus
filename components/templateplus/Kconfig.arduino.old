@@ -1,0 +1,107 @@
+menuconfig COMPONENT_ARDUINO
+	bool "Arduino"
+	default 0
+	select SUPPORT_STATIC_ALLOCATION
+	help
+		It allows to run applications based on Arduino libs. 
+		If enabled initArduino() is called to run any preparations required by the framework, 
+		memory allocated, the task is created and suspended.
+
+config COMPONENT_ARDUINO_CORE
+	int
+	default 0 if COMPONENT_ARDUINO_CORE_0
+	default 1 if COMPONENT_ARDUINO_CORE_1
+	depends on COMPONENT_ARDUINO
+	choice
+		prompt "Select core for Arduino"
+		depends on COMPONENT_ARDUINO
+		config COMPONENT_ARDUINO_CORE_0
+			bool "Core 0"
+			help
+				If selected Arduino will be executed by PRO Core.
+		config COMPONENT_ARDUINO_CORE_1
+			bool "Core 1"
+			help
+				If selected Arduino will be executed by APP Core.
+	endchoice
+
+config COMPONENT_ARDUINO_AUTOSTART
+	bool "Start Arduino loop on boot"
+	default 0
+	depends on COMPONENT_ARDUINO
+	help
+		By default the Arduino task stays suspended waiting for explicit resume.
+		Enabling this option will resume the C/C++ app task, execute setup() and start the loop.
+
+config DISABLE_HAL_LOCKS
+	bool "Disable mutex locks for HAL"
+	default "n"
+	depends on COMPONENT_ARDUINO
+	help
+		Enabling this option will run all hardware abstraction without locks.
+		While communication with external hardware will be faster, you need to
+		make sure that there is no option to use the same bus from another thread
+		or interrupt at the same time. Option is best used with Arduino enabled
+		and code implemented only in setup/loop and Arduino callbacks
+
+menu "Debug Log Configuration"
+	depends on COMPONENT_ARDUINO
+
+config ARDUHAL_LOG_DEFAULT_LEVEL
+	int
+	default 0 if ARDUHAL_LOG_DEFAULT_LEVEL_NONE
+	default 1 if ARDUHAL_LOG_DEFAULT_LEVEL_ERROR
+	default 2 if ARDUHAL_LOG_DEFAULT_LEVEL_WARN
+	default 3 if ARDUHAL_LOG_DEFAULT_LEVEL_INFO
+	default 4 if ARDUHAL_LOG_DEFAULT_LEVEL_DEBUG
+	default 5 if ARDUHAL_LOG_DEFAULT_LEVEL_VERBOSE
+	depends on COMPONENT_ARDUINO
+	choice
+		prompt "Default log level"
+		depends on COMPONENT_ARDUINO
+		config ARDUHAL_LOG_DEFAULT_LEVEL_NONE
+			bool "No output"
+			help
+				No output to logs.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_ERROR
+			bool "Error"
+			help
+				Errors only.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_WARN
+			bool "Warning"
+			help
+				Errors and Warnings.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_INFO
+			bool "Info"
+			help
+				Errors, Warnings, Info.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_DEBUG
+			bool "Debug"
+	   		help
+				Errors, Warnings, Info, Debug.
+		config ARDUHAL_LOG_DEFAULT_LEVEL_VERBOSE
+			bool "Everything"
+			help
+				Everything.
+	endchoice
+
+	config ARDUHAL_LOG_COLORS
+		bool "Use ANSI terminal colors in log output"
+		default "n"
+		depends on COMPONENT_ARDUINO
+		help
+			Enable ANSI terminal color codes in bootloader output.
+			In order to view these, your terminal program must support ANSI color codes.
+
+	config ARDUHAL_ESP_LOG
+		bool "Forward ESP_LOGx to Arduino log output"
+		default "n"
+		depends on COMPONENT_ARDUINO
+		help
+			This option will redefine the ESP_LOGx macros to Arduino's log_x macros.
+			To enable for your application, add the follwing after your includes:
+			#ifdef ARDUINO_ARCH_ESP32
+			#include "esp32-hal-log.h"
+			#endif
+
+endmenu
